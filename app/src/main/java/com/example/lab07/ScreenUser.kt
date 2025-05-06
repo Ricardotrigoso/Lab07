@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenUser(modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -20,68 +21,89 @@ fun ScreenUser(modifier: Modifier = Modifier) {
     var userList by remember { mutableStateOf<List<User>>(emptyList()) }
 
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Nombre") },
-            modifier = Modifier.fillMaxWidth()
-        )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Gestión de Usuarios") },
+                actions = {
+                    IconButton(onClick = {
+                        val user = User(firstName = name, lastName = email)
+                        coroutineScope.launch {
+                            dao.insert(user)
+                            userList = dao.getAll()
+                            snackbarHostState.showSnackbar("Usuario agregado")
+                        }
+                        name = ""
+                        email = ""
+                    }) {
+                        Text("Agregar")
+                    }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Botón para agregar usuario
-        Button(
-            onClick = {
-                val user = User(firstName = name, lastName = email)
-                coroutineScope.launch {
-                    dao.insert(user)
-                    userList = dao.getAll()
+                    IconButton(onClick = {
+                        coroutineScope.launch {
+                            userList = dao.getAll()
+                            snackbarHostState.showSnackbar("Lista actualizada")
+                        }
+                    }) {
+                        Text("Listar")
+                    }
                 }
-                name = ""
-                email = ""
-            },
-            modifier = Modifier.fillMaxWidth()
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        modifier = modifier.fillMaxSize()
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxSize()
         ) {
-            Text("Agregar Usuario")
-        }
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Nombre") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        //boton para quitar usuario
-        Button(
-            onClick = {
-                coroutineScope.launch {
-                    dao.deleteLastUser()
-                    userList = dao.getAll()
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        dao.deleteLastUser()
+                        userList = dao.getAll()
+                        snackbarHostState.showSnackbar("Último usuario eliminado")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Eliminar Último Usuario")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Lista de usuarios:", style = MaterialTheme.typography.titleMedium)
+
+            userList.forEach {
+                val first = it.firstName.orEmpty()
+                val last = it.lastName.orEmpty()
+                if (first.isNotBlank() || last.isNotBlank()) {
+                    Text("- $first $last")
                 }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-        ) {
-            Text("Eliminar Último Usuario")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text("Lista de usuarios:", style = MaterialTheme.typography.titleMedium)
-
-        userList.forEach {
-            Text("- ${it.firstName} ${it.lastName}")
+            }
         }
     }
 }

@@ -17,10 +17,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Lab07Theme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ScreenUser(modifier = Modifier.padding(innerPadding))
+                ScreenUser()
                 }
             }
         }
     }
-}
